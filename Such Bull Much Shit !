@@ -5,10 +5,10 @@ Brainstorming :
 
 Fonctions à coder :
 
-	 - void accept(int desc, struct sockaddr_in* client, int newPort)
+	 - void accept(int desc, struct sockaddr_in* client, int newPort) DONE
 	 - close
 	 - int createDesc(int port, int adress) DONE
-	 - int waitForString (int desc, const struct sockaddr_in* client, struct timeval waitTime, char* stringExpected)
+	 - int waitForString (int desc, const struct sockaddr_in* client, struct timeval waitTime, char* stringExpected) DONE
 	 - void transferFile(int desc, struct sockaddr_in client, char* fileName)
 
 

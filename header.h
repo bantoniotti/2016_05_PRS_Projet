@@ -9,3 +9,5 @@
 #include <netinet/in.h>
 #include <errno.h>
 
+#define RCVSIZE 1024
+#define DATAPORT 6000
