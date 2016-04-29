@@ -1,6 +1,11 @@
 #include "header.h"
 
 
+
+/*******************************************************************/
+//Cette fonction crée un descripteur et un socket puis les associe  /
+//Il faut rentrer le port et l'adresse au format host               /
+/*******************************************************************/
 int createDesc(int port, int adress){
   int desc = socket(AF_INET, SOCK_DGRAM, 0); //On crée un premier descripteur UDP
 
