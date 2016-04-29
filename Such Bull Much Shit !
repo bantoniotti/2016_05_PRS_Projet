@@ -1,0 +1,28 @@
+Such Bull Much Shit !
+
+Brainstorming :
+
+
+Fonctions à coder :
+
+	 - void accept(int desc, struct sockaddr_in* client, int newPort)
+	 - close
+	 - int createDesc(int port, int adress)
+	 - int waitForString (int desc, const struct sockaddr_in* client, struct timeval waitTime, char* stringExpected)
+	 - void transferFile(int desc, struct sockaddr_in client, char* fileName)
+
+
+On fait un fichier .h et un makefile
+
+nom des fichiers : 
+
+	for i in range(3):
+		serveurX-LesPoneysVengeurs.c
+
+	header.h
+	makefile
+
+
+nom des variables : 
+
+	
