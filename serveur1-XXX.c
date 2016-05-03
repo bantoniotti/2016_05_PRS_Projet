@@ -14,12 +14,12 @@ int waitForString (int desc, const struct sockaddr_in* client, struct timeval wa
 }
 
 
-void accept(int desc, struct sockaddr_in* client, int newPort){ //La fonction recrée un échange de SYN, SYN-ACK, ACK comme dans un protocole TCP
+void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonction recrée un échange de SYN, SYN-ACK, ACK comme dans un protocole TCP
   char buffer[RCVSIZE]; //Buffer contenant le message
   char* syn = "SYN"; 
   char* synack = "SYN-ACK"; //Trois chaines de caractères contenant les messages à échanger pour établir la connection
   char* ack = "ACK";
-  int fromsize = sizeof(client); //Taille de la structure contenant l'adrese du client
+  int fromsize = sizeof(*client); //Taille de la structure contenant l'adrese du client
   struct timeval time;
   time.tv_sec = 1;
   time.tv_usec = 0;
@@ -38,8 +38,7 @@ void accept(int desc, struct sockaddr_in* client, int newPort){ //La fonction re
   while (valid){
     time.tv_sec = 4; //Temps d'attente avant le réenvoi d'un message
 
-
-    if(sendto(desc, synack, strlen(synackport), 0, (struct sockaddr *) client, fromsize) < 0){
+    if(sendto(desc, synackport, strlen(synackport), 0, (struct sockaddr *) client, fromsize) < 0){
       perror("\nError while sending SYN-ACK, please restart server.\n");
       exit(-1);
     }
@@ -70,19 +69,21 @@ void accept(int desc, struct sockaddr_in* client, int newPort){ //La fonction re
 //Cette fonction crée un descripteur et un socket puis les associe  /
 //Il faut rentrer le port et l'adresse au format host               /
 /*******************************************************************/
-int createDesc(int port, int adress, sockaddr_in* sockaddress){
+int createDesc(int port, int adress, struct sockaddr_in* sockaddress){
   int desc = socket(AF_INET, SOCK_DGRAM, 0); //On crée un premier descripteur UDP
 
   if (desc < 0) { //On teste si le descripteur a bien été ouvert, sinon, fin du programme
     perror("cannot create socket\n");
     return -1;
   }
-
+  
+  int valid = 1;
+  
   setsockopt(desc, SOL_SOCKET, SO_REUSEADDR, &valid, sizeof(int)); //Permet de signaler à l'OS que le descripteur peut être réutilisé
 
-  *sockaddress.sin_family= AF_INET; //L'adresse est IP
-  *sockaddress.sin_port= htons(port); //Le port est passé au format serveur
-  *sockaddress.sin_addr.s_addr= htonl(adress);//L'adresse est passée au format serveur
+  (*sockaddress).sin_family= AF_INET; //L'adresse est IP
+  (*sockaddress).sin_port= htons(port); //Le port est passé au format serveur
+  (*sockaddress).sin_addr.s_addr= htonl(adress);//L'adresse est passée au format serveur
 
   if (bind(desc, (struct sockaddr*) sockaddress, sizeof(*sockaddress)) == -1) { //On lie l'addresse avec le descripteur
     perror("Bind fail\n"); //Si erreur, on termine le programme
@@ -111,13 +112,13 @@ int main(int argc,char *argv[]){
 
 	while(1){
 
-		accept(publicDesc, &client, DATAPORT);
+		customAccept(publicDesc, &client, DATAPORT);
 		newPID = fork();
 		if (newPID == 0){
-			int dataDesc = createDesc(DATAPORT, INADDR_ANY, server);
+			int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
             char* fileName = malloc(RCVSIZE*(sizeof(char)));
             int sizeOfClient = sizeof(client);
-            fileName = recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr*) client, &sizeOfClient);
+            recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s", fileName);
 		}
 		else {
