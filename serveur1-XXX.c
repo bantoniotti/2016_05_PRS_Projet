@@ -115,7 +115,9 @@ int main(int argc,char *argv[]){
 		newPID = fork();
 		if (newPID == 0){
 			int dataDesc = createDesc(DATAPORT, INADDR_ANY, server);
-
+            char* fileName = malloc(RCVSIZE*(sizeof(char)));
+            fileName = recvfrom(
+            
 		}
 		else {
 			//Gestion des ACK + nouveaux clients
