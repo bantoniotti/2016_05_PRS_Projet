@@ -116,8 +116,9 @@ int main(int argc,char *argv[]){
 		if (newPID == 0){
 			int dataDesc = createDesc(DATAPORT, INADDR_ANY, server);
             char* fileName = malloc(RCVSIZE*(sizeof(char)));
-            fileName = recvfrom(
-            
+            int sizeOfClient = sizeof(client);
+            fileName = recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr*) client, &sizeOfClient);
+            fprintf(stderr, "FileName : %s", fileName);
 		}
 		else {
 			//Gestion des ACK + nouveaux clients
