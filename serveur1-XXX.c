@@ -118,14 +118,51 @@ int main(int argc,char *argv[]){
 			int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
             char* fileName = malloc(RCVSIZE*(sizeof(char)));
             int sizeOfClient = sizeof(client);
+            int sequenceNumber = 1;
+            char* buffer = malloc(RCVSIZE*sizeof(char));
+            char* seqNumBuffer = malloc(7*sizeof(char));
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
-            fprintf(stderr, "FileName : %s", fileName);
+            fprintf(stderr, "FileName : %s\n", fileName);
+            FILE* file = fopen(fileName, "r");
+            if (file < 0){
+                fprintf(stderr, "Couldn't open file\nPlease, restart server");
+                exit(-1);
+            }
+            /*fprintf(stderr, "1%d\n", feof(file)); 
+            while(feof(file)==0){
+                memset(buffer, 0, RCVSIZE);
+                sprintf(seqNumBuffer, "%06d", sequenceNumber);
+                printf("2%d\n", feof(file));
+                fread(buffer, 1, RCVSIZE, file);
+                strcat(seqNumBuffer, buffer);
+                fprintf(stderr, "%s\n", seqNumBuffer);
+                printf("3%d\n", feof(file));
+                if (sendto(dataDesc, seqNumBuffer, strlen(seqNumBuffer), 0, (struct sockaddr *) &client, sizeOfClient) < 0){
+                    perror("Error while sending packet");
+                    fprintf(stderr, "Coucou\n");
+                }
+                sequenceNumber++;
+                printf("bar\n");
+                printf("4%d\n", feof(file));
+                printf("foo\n");
+            }*/
+            
+             while(fread(buffer, 1, RCVSIZE, file)>0){
+                sprintf(seqNumBuffer, "%06d", sequenceNumber);
+                strcat(seqNumBuffer, buffer);
+                fprintf(stderr, "%s\n", seqNumBuffer);
+                if (sendto(dataDesc, seqNumBuffer, strlen(seqNumBuffer), 0, (struct sockaddr *) &client, sizeOfClient) < 0){
+                    perror("Error while sending packet");
+                }
+                sequenceNumber++;
+                memset(buffer, 0, RCVSIZE);
+             }
 		}
 		else {
 			//Gestion des ACK + nouveaux clients
 		}
 
-
+// fprintf(stderr, "Coucou\n");
 
 
 
