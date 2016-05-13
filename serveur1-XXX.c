@@ -116,47 +116,45 @@ int main(int argc,char *argv[]){
 		newPID = fork();
 		if (newPID == 0){
 			int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
-            char* fileName = malloc(RCVSIZE*(sizeof(char)));
+            char fileName[100];
             int sizeOfClient = sizeof(client);
             int sequenceNumber = 1;
-            char* buffer = malloc(RCVSIZE*sizeof(char));
-            char* seqNumBuffer = malloc(7*sizeof(char));
+            char buffer[RCVSIZE];
+            char seqNumBuffer[7];
+            char bufferPacket[RCVSIZE+7];
+            int sizeOfDataSent = 0;
+            char* fin = "FIN";
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s\n", fileName);
-            FILE* file = fopen(fileName, "r");
+            FILE* file = NULL;
+            file = fopen(fileName, "rb");
             if (file < 0){
                 fprintf(stderr, "Couldn't open file\nPlease, restart server");
                 exit(-1);
             }
-            /*fprintf(stderr, "1%d\n", feof(file)); 
-            while(feof(file)==0){
-                memset(buffer, 0, RCVSIZE);
+            errno = 0;
+            while(!feof(file)){
+                
+                memset(buffer, 0, sizeof(buffer));
+                memset(seqNumBuffer, 0, sizeof(seqNumBuffer));
+                memset(bufferPacket, 0, sizeof(bufferPacket));
                 sprintf(seqNumBuffer, "%06d", sequenceNumber);
-                printf("2%d\n", feof(file));
-                fread(buffer, 1, RCVSIZE, file);
-                strcat(seqNumBuffer, buffer);
-                fprintf(stderr, "%s\n", seqNumBuffer);
-                printf("3%d\n", feof(file));
-                if (sendto(dataDesc, seqNumBuffer, strlen(seqNumBuffer), 0, (struct sockaddr *) &client, sizeOfClient) < 0){
+                sizeOfDataSent = fread(buffer, 1, RCVSIZE, file);
+                fprintf(stderr,"%s\n\n",buffer);
+                strcat(bufferPacket, seqNumBuffer);
+                memcpy(&bufferPacket[6], buffer, RCVSIZE);
+                fprintf(stderr, "%s\n", bufferPacket);
+                if (sendto(dataDesc, bufferPacket , sizeOfDataSent+6, 0, (struct sockaddr *) &client, sizeOfClient) <= 0){
                     perror("Error while sending packet");
                     fprintf(stderr, "Coucou\n");
                 }
                 sequenceNumber++;
-                printf("bar\n");
-                printf("4%d\n", feof(file));
-                printf("foo\n");
-            }*/
+                fprintf(stderr, "ACK received : %s\n", fileName);
+                fprintf(stderr, "Position : %d\n", ftell(file));
+            }
             
-             while(fread(buffer, 1, RCVSIZE, file)>0){
-                sprintf(seqNumBuffer, "%06d", sequenceNumber);
-                strcat(seqNumBuffer, buffer);
-                fprintf(stderr, "%s\n", seqNumBuffer);
-                if (sendto(dataDesc, seqNumBuffer, strlen(seqNumBuffer), 0, (struct sockaddr *) &client, sizeOfClient) < 0){
-                    perror("Error while sending packet");
-                }
-                sequenceNumber++;
-                memset(buffer, 0, RCVSIZE);
-             }
+            sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
+                
 		}
 		else {
 			//Gestion des ACK + nouveaux clients
