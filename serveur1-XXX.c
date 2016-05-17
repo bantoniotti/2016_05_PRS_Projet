@@ -1,5 +1,6 @@
 #include "header.h"
 
+int idbal;
 
 int waitForString (int desc, const struct sockaddr_in* client, struct timeval waitTime, char* stringExpected){
 
@@ -107,6 +108,12 @@ int main(int argc,char *argv[]){
     
     port = atoi(argv[1]);
 
+    idbal=create_msg(CLEF_BAL);
+    if(idbal<0){
+        printf("erreur à l'ouverture de la boite aux lettres");
+        exit(-1);
+    }
+    
     int publicDesc = createDesc(port, INADDR_ANY, &server);
     int newPID;
 
@@ -146,7 +153,6 @@ int main(int argc,char *argv[]){
                 fprintf(stderr, "%s\n", bufferPacket);
                 if (sendto(dataDesc, bufferPacket , sizeOfDataSent+6, 0, (struct sockaddr *) &client, sizeOfClient) <= 0){
                     perror("Error while sending packet");
-                    fprintf(stderr, "Coucou\n");
                 }
                 sequenceNumber++;
                 fprintf(stderr, "ACK received : %s\n", fileName);

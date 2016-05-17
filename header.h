@@ -8,6 +8,8 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include "msg.h"
 
 #define RCVSIZE 1494
 #define DATAPORT 6000
+#define CLEF_BAL 300
