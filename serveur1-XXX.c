@@ -122,8 +122,15 @@ int main(int argc,char *argv[]){
             char buffer[RCVSIZE];
             char seqNumBuffer[7];
             char bufferPacket[RCVSIZE+7];
+            char ackBuffer[10];
             int sizeOfDataSent = 0;
             char* fin = "FIN";
+            int maxACK = 0;
+            int timeout = 680;
+            int ackNumber = 0;
+            int window = 16;
+            int i;
+            clock_t tStart, tCurrent;
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s\n", fileName);
             FILE* file = NULL;
@@ -133,24 +140,55 @@ int main(int argc,char *argv[]){
                 exit(-1);
             }
             errno = 0;
+            tStart = clock();
+            tCurrent = clock();
+            
             while(!feof(file)){
                 
-                memset(buffer, 0, sizeof(buffer));
-                memset(seqNumBuffer, 0, sizeof(seqNumBuffer));
-                memset(bufferPacket, 0, sizeof(bufferPacket));
-                sprintf(seqNumBuffer, "%06d", sequenceNumber);
-                sizeOfDataSent = fread(buffer, 1, RCVSIZE, file);
-                fprintf(stderr,"%s\n\n",buffer);
-                strcat(bufferPacket, seqNumBuffer);
-                memcpy(&bufferPacket[6], buffer, RCVSIZE);
-                fprintf(stderr, "%s\n", bufferPacket);
-                if (sendto(dataDesc, bufferPacket , sizeOfDataSent+6, 0, (struct sockaddr *) &client, sizeOfClient) <= 0){
-                    perror("Error while sending packet");
-                    fprintf(stderr, "Coucou\n");
+                while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout){
+                    tCurrent = clock();
+                    recvfrom(dataDesc, ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
+                    sscanf(ackBuffer, "ACK%d", &ackNumber);
+                    if (ackNumber>maxACK)
+                        maxACK = ackNumber;
+                    
                 }
-                sequenceNumber++;
-                fprintf(stderr, "ACK received : %s\n", fileName);
-                fprintf(stderr, "Position : %d\n", ftell(file));
+                fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d\n", maxACK, sequenceNumber);
+                if (maxACK == sequenceNumber-1){
+                    if (window < 256)
+                        window *= 2;
+                    else 
+                        window += 16;
+                    fprintf(stderr, "J'augmente la fenetre\n");
+                }
+                else {
+                    if (window > 1)
+                        window /= 2;
+                    fprintf(stderr, "Je diminue la fenetre\n");
+                }
+                sequenceNumber = maxACK + window;
+                i = maxACK+1;
+                while(i<sequenceNumber && !feof(file)){
+                    
+                    fseek(file, ((i-1)*RCVSIZE), SEEK_SET);
+                    fprintf(stderr, "i = %d, window : %d, position : %d\n", i, window, ftell(file));
+                    memset(buffer, 0, sizeof(buffer));
+                    memset(seqNumBuffer, 0, sizeof(seqNumBuffer));
+                    memset(bufferPacket, 0, sizeof(bufferPacket));
+                    sprintf(seqNumBuffer, "%06d", i);
+                    fprintf(stderr, "SeqNum : %s\n", seqNumBuffer);
+                    sizeOfDataSent = fread(buffer, 1, RCVSIZE, file);
+//                     fprintf(stderr,"%s\n\n",buffer);
+                    strcat(bufferPacket, seqNumBuffer);
+                    memcpy(&bufferPacket[6], buffer, RCVSIZE);
+                    //fprintf(stderr, "%s\n", bufferPacket);
+                    if (sendto(dataDesc, bufferPacket , sizeOfDataSent+6, 0, (struct sockaddr *) &client, sizeOfClient) <= 0){
+                        perror("Error while sending packet");
+                    }
+                    i++;
+                }
+                
+                tStart = clock();
             }
             
             sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);

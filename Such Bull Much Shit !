@@ -23,6 +23,6 @@ nom des fichiers :
 	makefile
 
 
-nom des variables : 
+Déroulement des opérations :
 
-	
+Une fois la connexion effectuée, Serveur1-XXX fork et crée un minion dont la tache va être de recevoir les ACKs, définir la fenêtre d'émission puis d'envoyer en message à son minion pour qu'il envoie les paquets dont le numéro de séquence aura été mis dans le message.	

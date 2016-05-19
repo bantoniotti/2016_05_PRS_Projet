@@ -8,6 +8,7 @@
 #include <sys/select.h>
 #include <netinet/in.h>
 #include <errno.h>
+#include <time.h>
 
 #define RCVSIZE 1494
 #define DATAPORT 6000
