@@ -38,7 +38,6 @@ void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonct
 
     while (valid){
         time.tv_sec = 4; //Temps d'attente avant le réenvoi d'un message
-
         if(sendto(desc, synackport, strlen(synackport), 0, (struct sockaddr *) client, fromsize) < 0){
             perror("\nError while sending SYN-ACK, please restart server.\n");
             exit(-1);
@@ -110,13 +109,14 @@ int main(int argc,char *argv[]){
 
     int publicDesc = createDesc(port, INADDR_ANY, &server);
     int newPID;
-
+    int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
+    
     while(1){
-
+    
         customAccept(publicDesc, &client, DATAPORT);
         newPID = fork();
         if (newPID == 0){
-            int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
+//             int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
             char fileName[100];
             int sizeOfClient = sizeof(client);
             int sequenceNumber = 1;
@@ -131,7 +131,7 @@ int main(int argc,char *argv[]){
             int ackNumber = 0;
             int window = 16;
             int i;
-            clock_t tStart, tCurrent;
+            clock_t tStart, tCurrent,tRttStart;
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s\n", fileName);
             FILE* file = NULL;
@@ -156,6 +156,7 @@ int main(int argc,char *argv[]){
                 }
                 fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d\n", maxACK, sequenceNumber);
                 if (maxACK == sequenceNumber-1){
+                    printf("RTT= %f\n", (1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC);
                     if (window < 256)
                         window *= 2;
                     else 
@@ -179,7 +180,7 @@ int main(int argc,char *argv[]){
                     sprintf(seqNumBuffer, "%06d", i);
                     fprintf(stderr, "SeqNum : %s\n", seqNumBuffer);
                     sizeOfDataSent = fread(buffer, 1, RCVSIZE, file);
-//                     fprintf(stderr,"%s\n\n",buffer);
+                    //fprintf(stderr,"%s\n\n",buffer);
                     strcat(bufferPacket, seqNumBuffer);
                     memcpy(&bufferPacket[6], buffer, RCVSIZE);
                     //fprintf(stderr, "%s\n", bufferPacket);
