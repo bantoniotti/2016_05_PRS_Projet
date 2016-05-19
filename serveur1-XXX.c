@@ -131,7 +131,7 @@ int main(int argc,char *argv[]){
             int ackNumber = 0;
             int window = 16;
             int i;
-            clock_t tStart, tCurrent,tRttStart;
+            clock_t tStart, tCurrent;
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s\n", fileName);
             FILE* file = NULL;
@@ -144,7 +144,7 @@ int main(int argc,char *argv[]){
             tStart = clock();
             tCurrent = clock();
             
-            while(!feof(file)){
+            while((maxACK!=sequenceNumber-1)||(!feof(file))){
                 
                 while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout){
                     tCurrent = clock();

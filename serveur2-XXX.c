@@ -38,7 +38,6 @@ void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonct
 
     while (valid){
         time.tv_sec = 4; //Temps d'attente avant le réenvoi d'un message
-
         if(sendto(desc, synackport, strlen(synackport), 0, (struct sockaddr *) client, fromsize) < 0){
             perror("\nError while sending SYN-ACK, please restart server.\n");
             exit(-1);
@@ -110,9 +109,9 @@ int main(int argc,char *argv[]){
 
     int publicDesc = createDesc(port, INADDR_ANY, &server);
     int newPID;
-
+    int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
+    
     while(1){
-        int dataDesc = createDesc(DATAPORT, INADDR_ANY, &server);
         customAccept(publicDesc, &client, DATAPORT);
         newPID = fork();
         if (newPID == 0){
@@ -144,7 +143,7 @@ int main(int argc,char *argv[]){
             tStart = clock();
             tCurrent = clock();
             
-            while(!feof(file)){
+            while((maxACK!=sequenceNumber-1)||(!feof(file))){
                 
                 while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout){
                     tCurrent = clock();
@@ -156,6 +155,7 @@ int main(int argc,char *argv[]){
                 }
                 fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d\n", maxACK, sequenceNumber);
                 if (maxACK == sequenceNumber-1){
+                    fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d\n", maxACK, sequenceNumber);
                     if (window < 8)
                         window *= 2;
                     else 

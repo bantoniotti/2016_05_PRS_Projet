@@ -146,7 +146,7 @@ int main(int argc,char *argv[]){
             tStart = clock();
             tCurrent = clock();
             
-            while(!feof(file)){
+            while((maxACK!=sequenceNumber-1)||(!feof(file))){
                 
                 while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout){
                     tCurrent = clock();
