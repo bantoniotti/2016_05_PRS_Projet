@@ -132,8 +132,9 @@ int main(int argc,char *argv[]){
             int timeout = 680;
             int ackNumber = 0;
             int window = 16;
-            int i;
-            clock_t tStart, tCurrent,tRttStart;
+            int i, masterPacket;
+            int messageReceived=0;
+            clock_t tStart, tCurrent;
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s\n", fileName);
             FILE* file = NULL;
@@ -141,35 +142,59 @@ int main(int argc,char *argv[]){
             if (file < 0){
                 fprintf(stderr, "Couldn't open file\nPlease, restart server");
                 exit(-1);
-            }
-            errno = 0;
+            } 
+            fseek(file,0,SEEK_END);
+            masterPacket = (ftell(file)/(RCVSIZE))+1;
+            fprintf(stderr, "File name :%s\nNumber of packets : %d\n", fileName, masterPacket);
             tStart = clock();
             tCurrent = clock();
+            int numberOfSameACK=0;
             
-            while((maxACK!=sequenceNumber-1)||(!feof(file))){
+            while(maxACK<masterPacket){
                 
-                while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout){
+                while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout && numberOfSameACK != 3){
                     tCurrent = clock();
-                    recvfrom(dataDesc, ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
+                    messageReceived=recvfrom(dataDesc, ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
                     sscanf(ackBuffer, "ACK%d", &ackNumber);
                     if (ackNumber>maxACK)
                         maxACK = ackNumber;
                     
+                     /* Implémentation de Fast Retransmit */
+                    
+                    if (maxACK == ackNumber && messageReceived != -1){
+                        numberOfSameACK++;
+                        fprintf(stderr, "Encore le même ACK ? : %d, numberOfSameACK : %d\n", maxACK, numberOfSameACK);
+                    }
+                    else if (maxACK != ackNumber && messageReceived != -1){
+                        numberOfSameACK = 0;
+                        fprintf(stderr, "Je réinitialise");
+                    }
                 }
-                fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d\n", maxACK, sequenceNumber);
-                if (maxACK == sequenceNumber-1){
+                fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d, timeout : %f, sameAck : %d\n", maxACK, sequenceNumber,(1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC, numberOfSameACK);
+                /*
+                 
+                 Implémentation de Slow Start
+                 
+                 */
+                
+                /*if (maxACK == sequenceNumber-1){
                     printf("RTT= %f\n", (1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC);
-                    if (window < 256)
+                    if (window < 128)
                         window *= 2;
                     else 
                         window += 16;
                     fprintf(stderr, "J'augmente la fenetre\n");
                 }
+                else if(numberOfSameACK == 3){
+                    if (window > 19)
+                        window -= 18;
+                }
                 else {
                     if (window > 1)
                         window /= 2;
                     fprintf(stderr, "Je diminue la fenetre\n");
-                }
+                }*/
+                
                 sequenceNumber = maxACK + window;
                 i = maxACK+1;
                 while(i<sequenceNumber && !feof(file)){
@@ -193,6 +218,8 @@ int main(int argc,char *argv[]){
                 }
                 
                 tStart = clock();
+                tCurrent = clock();
+                numberOfSameACK = 0;
             }
             
             sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
