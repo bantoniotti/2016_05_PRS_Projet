@@ -12,3 +12,4 @@
 
 #define RCVSIZE 1494
 #define DATAPORT 6000
+#define CLEF_BAL 300
