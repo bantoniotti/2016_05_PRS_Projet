@@ -129,7 +129,7 @@ int main(int argc,char *argv[]){
             int maxACK = 0;
             int timeout = 680;
             int ackNumber = 0;
-            int window = 64;
+            int window = 96;
             int i, masterPacket;
             int messageReceived = 0;
             clock_t tStart, tCurrent;
@@ -160,15 +160,15 @@ int main(int argc,char *argv[]){
                     
                     if (maxACK == ackNumber && messageReceived != -1){
                         numberOfSameACK++;
-                        fprintf(stderr, "Encore le même ACK ? : %d, numberOfSameACK : %d\n", maxACK, numberOfSameACK);
+//                         fprintf(stderr, "Encore le même ACK ? : %d, numberOfSameACK : %d\n", maxACK, numberOfSameACK);
                     }
                     else if (maxACK != ackNumber && messageReceived != -1){
                         numberOfSameACK = 0;
-                        fprintf(stderr, "Je réinitialise");
+//                         fprintf(stderr, "Je réinitialise le nombre d'ACK identiques");
                     }
                     
                 }
-                fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d, timeout : %f, sameAck : %d\n", maxACK, sequenceNumber,(1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC, numberOfSameACK);
+//                  fprintf(stderr, "Sortie de la boucle : maxACK = %d, sequenceNumber = %d, timeout : %f, sameAck : %d\n", maxACK, sequenceNumber,(1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC, numberOfSameACK);
                 /*
                  
                  Implémentation de Slow Start
@@ -195,11 +195,11 @@ int main(int argc,char *argv[]){
                 
                 sequenceNumber = maxACK + window;
                 i = maxACK+1;
-                while(i<sequenceNumber/* && !feof(file)*/){
+                while(i<sequenceNumber && i <= masterPacket/* && !feof(file)*/){
                     
                     fseek(file, ((i-1)*RCVSIZE), SEEK_SET);
                     
-                    fprintf(stderr, "i = %d/%d, window : %d, position : %d\n", i, masterPacket, window, ftell(file));
+//                     fprintf(stderr, "i = %d/%d, window : %d, position : %d\n", i, masterPacket, window, ftell(file));
                     
                     memset(buffer, 0, sizeof(buffer));
                     memset(seqNumBuffer, 0, sizeof(seqNumBuffer));
@@ -223,10 +223,17 @@ int main(int argc,char *argv[]){
                 tStart = clock();
                 tCurrent = clock();
                 numberOfSameACK = 0;
+//                 fprintf(stderr, "maxACK : %d", maxACK);
             }
-            
-            sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
-                
+            fprintf(stderr, "J'envoie %s\n", fin);
+            tStart = clock();
+            tCurrent = clock();
+            while(((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC) < 1000) {
+                sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
+                tCurrent = clock();
+                fprintf(stderr, "J'envoie %f\n", ((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC));
+            }
+            exit(0);
         }
         else {
             //Gestion des ACK + nouveaux clients
