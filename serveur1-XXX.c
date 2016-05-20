@@ -195,6 +195,7 @@ int main(int argc,char *argv[]){
                 
                 sequenceNumber = maxACK + window;
                 i = maxACK+1;
+                
                 while(i<sequenceNumber && i <= masterPacket/* && !feof(file)*/){
                     
                     fseek(file, ((i-1)*RCVSIZE), SEEK_SET);
@@ -207,7 +208,7 @@ int main(int argc,char *argv[]){
                     
                     sprintf(seqNumBuffer, "%06d", i);
                     
-//                     fprintf(stderr, "SeqNum : %s\n", seqNumBuffer);
+                    //fprintf(stderr, "SeqNum : %s\n", seqNumBuffer);
                     
                     sizeOfDataSent = fread(buffer, 1, RCVSIZE, file);
                     //fprintf(stderr,"%s\n\n",buffer);
@@ -238,6 +239,5 @@ int main(int argc,char *argv[]){
         else {
             //Gestion des ACK + nouveaux clients
         }
-        // fprintf(stderr, "Coucou\n");
     }
 }
