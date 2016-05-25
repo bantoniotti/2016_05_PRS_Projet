@@ -1,6 +1,7 @@
 #include "header.h"
 
-int idbal;
+int idMutex, dataDesc, dataport;
+struct sockaddr_in public, private, client;
 
 int waitForString (int desc, const struct sockaddr_in* client, struct timeval waitTime, char* stringExpected){
 
@@ -15,12 +16,13 @@ int waitForString (int desc, const struct sockaddr_in* client, struct timeval wa
 }
 
 
-void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonction recrée un échange de SYN, SYN-ACK, ACK comme dans un protocole TCP
+void customAccept(int desc, int newPort){ 
+//La fonction recrée un échange de SYN, SYN-ACK, ACK comme dans un protocole TCP
     char buffer[RCVSIZE]; //Buffer contenant le message
     char* syn = "SYN"; 
     char* synack = "SYN-ACK"; //Trois chaines de caractères contenant les messages à échanger pour établir la connection
     char* ack = "ACK";
-    int fromsize = sizeof(*client); //Taille de la structure contenant l'adrese du client
+    int fromsize = sizeof(client); //Taille de la structure contenant l'adrese du client
     struct timeval time;
     time.tv_sec = 1;
     time.tv_usec = 0;
@@ -28,8 +30,7 @@ void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonct
     sprintf(synackport, "%s%d", synack, newPort);
   
     /* Attente du SYN, on boucle tant qu'on a pas un message correct*/
-
-    while (waitForString(desc, (const struct sockaddr_in*) client, time, syn) != 0){
+    while (waitForString(desc, (const struct sockaddr_in*) &client, time, syn) != 0){
     }
 
     fprintf(stderr,"SYN received");
@@ -38,21 +39,21 @@ void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonct
 
     while (valid){
         time.tv_sec = 4; //Temps d'attente avant le réenvoi d'un message
-        if(sendto(desc, synackport, sizeof(synackport), 0, (struct sockaddr *) client, fromsize) < 0){
+        if(sendto(desc, synackport, sizeof(synackport), 0, (struct sockaddr *) &client, fromsize) < 0){
             perror("\nError while sending SYN-ACK, please restart server.\n");
             exit(-1);
         }
         else {
-            fprintf(stderr,", sending %s\n", synackport);
+            fprintf(stderr,"sending %s\n", synackport);
         }
 
-        /*On commence par appller la fonction select, si elle recoit une modification 
+        /*On commence par appeler la fonction select, si elle recoit une modification 
         * du descripteur, ou que le timeout arrive à expiration, le programme passe
         * à la fonction recvfrom avec le paramètre MSG_DONTWAIT qui fait passer la fonction
         * si elle n'a pas de message à transmettre. On compare alors la chaine reçue. 
         * Si elle ne correspond pas ou est vide, on recommence l'envoi d'un SYN-ACK*/
 
-        valid = waitForString(desc, (const struct sockaddr_in*) client, time, ack);
+        valid = waitForString(desc, (const struct sockaddr_in*) &client, time, ack);
 
         if(valid == 0){
             fprintf(stderr,"ACK received, connection established\n");
@@ -62,6 +63,20 @@ void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonct
             memset(buffer, '\0', sizeof(buffer));
         }
     }
+    valid=1;
+    dataDesc=socket(AF_INET, SOCK_DGRAM, 0);
+    setsockopt(dataDesc, SOL_SOCKET, SO_REUSEADDR, &valid, sizeof(valid));            
+    
+    private.sin_family = AF_INET;
+    private.sin_port = htons(dataport);
+    private.sin_addr.s_addr = client.sin_addr.s_addr;
+    if (bind(dataDesc, (struct sockaddr*) &private, sizeof(private)) == -1) {
+        perror("Bind fail\n");
+        close(dataDesc);
+        return -1;
+    }
+    
+    dataport++; 
 }
 
 
@@ -96,11 +111,14 @@ int createDesc(int port, int adress, struct sockaddr_in* sockaddress){
 
 int main(int argc,char *argv[]){
     
-    struct sockaddr_in server[MAX_CLIENT], client;
-
+    idMutex=create_semaphore(CLESEM);
+    if(idMutex<0){
+        printf("erreur à l'ouverture du sémaphore");
+        exit(-1);
+    }
+    init_semaphore(idMutex,1);
+    
     int port;
-    int numClient=0;
-    int dataDesc[MAX_CLIENT];
 
     if (argc != 2){
         fprintf(stderr, "Error, you must specify only the port number\n");
@@ -108,19 +126,18 @@ int main(int argc,char *argv[]){
     }
     
     port = atoi(argv[1]);
-
-    int publicDesc = createDesc(port, INADDR_ANY, &server[numClient]);
+    
+    dataport=DATAPORT;
+    int publicDesc = createDesc(port, INADDR_ANY, &public);
     int newPID;
     
     while(1){
     
-        customAccept(publicDesc, &client, DATAPORT+numClient);
+        customAccept(publicDesc, dataport);
         newPID = fork();
         if (newPID == 0){
-            dataDesc[numClient] = createDesc(DATAPORT+numClient, INADDR_ANY, &server[numClient]);
-            fprintf(stderr,"numClient=%d\ndataDesc= %d\nadresse dataDesc= %d\n",numClient,dataDesc[numClient],&dataDesc[numClient]);
             char fileName[100];
-            int sizeOfClient = sizeof(client);
+            socklen_t sizeOfClient = (socklen_t) sizeof(client);
             int sequenceNumber = 1;
             char buffer[RCVSIZE];
             char seqNumBuffer[7];
@@ -135,16 +152,19 @@ int main(int argc,char *argv[]){
             int i, masterPacket;
             int messageReceived=0;
             clock_t tStart, tCurrent;
-            fprintf(stderr,"trololol: %d\n",numClient);
-            recvfrom(dataDesc[numClient], fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
-            fprintf(stderr, "FileName : %s\n", fileName);
+            fprintf(stderr,"dataDesc= %d\n",dataDesc);
+            recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
+            fprintf(stderr, "File Name : %s\n", fileName);
             FILE* file = NULL;
+            down(idMutex);
             file = fopen(fileName, "rb");
             if (file < 0){
                 fprintf(stderr, "Couldn't open file\nPlease, restart server");
                 exit(-1);
             } 
             fseek(file,0,SEEK_END);
+            up(idMutex);
+            
             masterPacket = (ftell(file)/(RCVSIZE))+1;
             fprintf(stderr, "File name :%s\nNumber of packets : %d\n", fileName, masterPacket);
             tStart = clock();
@@ -155,7 +175,7 @@ int main(int argc,char *argv[]){
                 
                 while (maxACK < sequenceNumber-1 && ((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout && numberOfSameACK != 3){
                     tCurrent = clock();
-                    messageReceived=recvfrom(dataDesc[numClient], ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
+                    messageReceived=recvfrom(dataDesc, ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
                     sscanf(ackBuffer, "ACK%d", &ackNumber);
                     if (ackNumber>maxACK)
                         maxACK = ackNumber;
@@ -198,8 +218,8 @@ int main(int argc,char *argv[]){
                 
                 sequenceNumber = maxACK + window;
                 i = maxACK+1;
+                down(idMutex);
                 while(i<sequenceNumber && i <= masterPacket){
-                    
                     fseek(file, ((i-1)*RCVSIZE), SEEK_SET);
                     //fprintf(stderr, "i = %d, window : %d, position : %d\n", i, window, ftell(file));
                     memset(buffer, 0, sizeof(buffer));
@@ -212,30 +232,28 @@ int main(int argc,char *argv[]){
                     strcat(bufferPacket, seqNumBuffer);
                     memcpy(&bufferPacket[6], buffer, RCVSIZE);
                     //fprintf(stderr, "%s\n", bufferPacket);
-                    if (sendto(dataDesc[numClient], bufferPacket , sizeOfDataSent+6, 0, (struct sockaddr *) &client, sizeOfClient) <= 0){
+                    if (sendto(dataDesc, bufferPacket , sizeOfDataSent+6, 0, (struct sockaddr *) &client, sizeOfClient) <= 0){
                         perror("Error while sending packet");
                     }
                     i++;
                 }
-                
+                up(idMutex);
                 tStart = clock();
                 tCurrent = clock();
                 numberOfSameACK = 0;
             }
             
-             fprintf(stderr, "J'envoie %s\n", fin);
+            fprintf(stderr, "J'envoie %s\n", fin);
             tStart = clock();
             tCurrent = clock();
             while(((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC) < 1000) {
-                sendto(dataDesc[numClient], fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
+                sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
                 tCurrent = clock();
-//                 fprintf(stderr, "J'envoie %f\n", ((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC));
             }
             exit(0);
         }
         else {
             //Gestion des ACK + nouveaux clients
-            numClient++;
         }
     }
 }

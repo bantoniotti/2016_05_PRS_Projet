@@ -232,7 +232,6 @@ int main(int argc,char *argv[]){
             while(((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC) < 1000) {
                 sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
                 tCurrent = clock();
-                fprintf(stderr, "J'envoie %f\n", ((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC));
             }
             exit(0);
         }
