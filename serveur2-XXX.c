@@ -127,9 +127,9 @@ int main(int argc,char *argv[]){
             int sizeOfDataSent = 0;
             char* fin = "FIN";
             int maxACK = 0;
-            int timeout = 200;
+            int timeout = 25;
             int ackNumber = 0;
-            int window = 12;
+            int window = 55;
             int i,masterPacket;
             int messageReceived = 0;
             clock_t tStart, tCurrent;
@@ -148,11 +148,11 @@ int main(int argc,char *argv[]){
             tCurrent = clock();
             int numberOfSameACK = 0;
             
-            while(maxACK<masterPacket && !feof(file)){
+            while(maxACK<masterPacket){
                 
-                while (maxACK < sequenceNumber-1 && ((1000*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout && numberOfSameACK != 3){
+                while (maxACK < sequenceNumber-1 && ((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC)< timeout && numberOfSameACK != 3){
                     tCurrent = clock();
-                    recvfrom(dataDesc, ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
+                   messageReceived=recvfrom(dataDesc, ackBuffer, sizeof(ackBuffer), MSG_DONTWAIT, (struct sockaddr *) &client, &sizeOfClient);
                     sscanf(ackBuffer, "ACK%d", &ackNumber);
                     if (ackNumber>maxACK)
                         maxACK = ackNumber;
@@ -191,10 +191,11 @@ int main(int argc,char *argv[]){
                 }*/
                 sequenceNumber = maxACK + window;
                 i = maxACK+1;
-                while(i<sequenceNumber && !feof(file)){
+               
+                while(i<sequenceNumber && i<=masterPacket){
                     
                     fseek(file, ((i-1)*RCVSIZE), SEEK_SET);
-                   fprintf(stderr, "i = %d/%d, window : %d, position : %d\n", i, masterPacket, window, ftell(file));
+                   //fprintf(stderr, "i = %d/%d, window : %d, position : %d\n", i, masterPacket, window, ftell(file));
                     memset(buffer, 0, sizeof(buffer));
                     memset(seqNumBuffer, 0, sizeof(seqNumBuffer));
                     memset(bufferPacket, 0, sizeof(bufferPacket));
@@ -215,9 +216,16 @@ int main(int argc,char *argv[]){
                 tCurrent = clock();
                 numberOfSameACK = 0;
             }
-            
+             fprintf(stderr, "J'envoie %s\n", fin);
+            tStart = clock();
+            tCurrent = clock();
+            while(((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC) < 1000) {
+                sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
+                tCurrent = clock();
+                fprintf(stderr, "J'envoie %f\n", ((1000.0*(tCurrent - tStart))/CLOCKS_PER_SEC));
+            }
             sendto(dataDesc, fin , sizeof(fin), 0, (struct sockaddr *) &client, sizeOfClient);
-                
+            exit(0);
         }
         else {
             //Gestion des ACK + nouveaux clients

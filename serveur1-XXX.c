@@ -72,7 +72,7 @@ void customAccept(int desc, struct sockaddr_in* client, int newPort){ //La fonct
 int createDesc(int port, int adress, struct sockaddr_in* sockaddress){
     int desc = socket(AF_INET, SOCK_DGRAM, 0); //On crée un premier descripteur UDP
 
-    if (desc < 0) { //On teste si le descripteur a bien été ouvert, sinon, fin du pro gramme
+    if (desc < 0) { //On teste si le descripteur a bien été ouvert, sinon, fin du programme
         perror("cannot create socket\n");
         return -1;
     }
@@ -127,9 +127,9 @@ int main(int argc,char *argv[]){
             int sizeOfDataSent = 0;
             char* fin = "FIN";
             int maxACK = 0;
-            int timeout = 680;
+            int timeout = 400; //def680->gain de 10 secondes avec 400
             int ackNumber = 0;
-            int window = 96;
+            int window = 150; //def96 -> gain de 10 secondes avec 200
             int i, masterPacket;
             int messageReceived = 0;
             clock_t tStart, tCurrent;
