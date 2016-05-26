@@ -145,7 +145,7 @@ int main(int argc,char *argv[]){
             int sizeOfDataSent = 0;
             char* fin = "FIN";
             int maxACK = 0;
-            int timeout = 400;
+            int timeout = 200;
             int ackNumber = 0;
             int window = 150;
             int i, masterPacket;

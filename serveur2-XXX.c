@@ -125,9 +125,9 @@ int main(int argc,char *argv[]){
             int sizeOfDataSent = 0;
             char* fin = "FIN";
             int maxACK = 0;
-            int timeout = 25;
+            int timeout = 10;
             int ackNumber = 0;
-            int window = 55;
+            int window = 25;
             int i,masterPacket;
             int messageReceived = 0;
             clock_t tStart, tCurrent;
