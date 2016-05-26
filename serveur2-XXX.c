@@ -125,12 +125,13 @@ int main(int argc,char *argv[]){
             int sizeOfDataSent = 0;
             char* fin = "FIN";
             int maxACK = 0;
-            int timeout = 25;
+            int timeout = 10;
             int ackNumber = 0;
-            int window = 55;
+            int window = 10;
             int i,masterPacket;
             int messageReceived = 0;
             clock_t tStart, tCurrent;
+            
             recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             fprintf(stderr, "FileName : %s\n", fileName);
             FILE* file = NULL;
