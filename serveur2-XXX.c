@@ -127,7 +127,7 @@ int main(int argc,char *argv[]){
             int maxACK = 0;
             int timeout = 10;
             int ackNumber = 0;
-            int window = 10;
+            int window = 25;
             int i,masterPacket;
             int messageReceived = 0;
             clock_t tStart, tCurrent;
