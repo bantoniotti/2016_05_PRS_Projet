@@ -137,6 +137,7 @@ int main(int argc,char *argv[]){
         if (newPID == 0){
             char fileName[100];
             socklen_t sizeOfClient = (socklen_t) sizeof(client);
+            recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
             int sequenceNumber = 1;
             char buffer[RCVSIZE];
             char seqNumBuffer[7];
@@ -152,7 +153,7 @@ int main(int argc,char *argv[]){
             int messageReceived=0;
             clock_t tStart, tCurrent;
             
-            recvfrom(dataDesc, fileName, sizeof(fileName), 0, (struct sockaddr *) &client, &sizeOfClient);
+            
             fprintf(stderr, "File Name : %s\n", fileName);
             FILE* file = NULL;
             down(idMutex);
